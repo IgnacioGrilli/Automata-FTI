@@ -1,0 +1,14 @@
+{
+  "name": "tabla_automata",
+  "states": ["S0", "S1", "S2", "S3", "S4"],
+  "alphabet": ["a", "b"],
+  "start_state": "S0",
+  "accept_states": ["S3", "S4"],
+  "transitions": {
+    "S0": { "a": ["S1", "S2"], "b": ["S5"] },
+    "S1": { "a": ["S3"], "b": ["S1"] },
+    "S2": { "a": ["S2"], "b": ["S4"] },
+    "S3": { "a": ["S5"], "b": ["S3"] },
+    "S4": { "a": ["S5"], "b": ["S5"] }
+  }
+}
