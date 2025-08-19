@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<automaton name="sample_end_ab"><states><state>q0</state><state>q1</state><state>q2</state></states><alphabet><symbol>a</symbol><symbol>b</symbol></alphabet><start>q0</start><accept><state>q2</state></accept><transitions><t from="q0" symbol="a" to="q0" /><t from="q0" symbol="a" to="q1" /><t from="q0" symbol="b" to="q0" /><t from="q1" symbol="b" to="q2" /></transitions></automaton>
