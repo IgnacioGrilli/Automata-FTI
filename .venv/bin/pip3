@@ -1,4 +1,4 @@
-#!/home/ignacio/Escritorio/Fundamentos-Teoricos-2025/Automata-FTI/.venv/bin/python3
+#!/mnt/Datos/dev/Automata-FTI/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

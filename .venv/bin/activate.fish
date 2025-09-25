@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/ignacio/Escritorio/Fundamentos-Teoricos-2025/Automata-FTI/.venv
+set -gx VIRTUAL_ENV /mnt/Datos/dev/Automata-FTI/.venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
