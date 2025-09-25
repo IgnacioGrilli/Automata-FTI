@@ -58,6 +58,10 @@ class AutomatonGUI:
         ttk.Button(control_frame, text="Minimizar AFD", command=self.minimize_dfa).pack(side='left', padx=5, pady=5)
         ttk.Button(control_frame, text="Guardar resultado (JSON)", command=lambda: self.save_file('json')).pack(side='left', padx=5, pady=5)
         ttk.Button(control_frame, text="Guardar resultado (XML)", command=lambda: self.save_file('xml')).pack(side='left', padx=5, pady=5)
+        self.string_var = tk.StringVar()
+        ttk.Label(control_frame, text="Cadena:").pack(side='left', padx=5)
+        ttk.Entry(control_frame, textvariable=self.string_var, width=20).pack(side='left', padx=5)
+        ttk.Button(control_frame, text="Validar Cadena", command=self.on_validate_string).pack(side='left', padx=5, pady=5)
         self.use_readable_names = tk.BooleanVar(value=True)
         ttk.Checkbutton(control_frame, text="Mostrar nombres legibles de estados", variable=self.use_readable_names, command=self.refresh_visualization).pack(side='right', padx=5, pady=5)
         self.notebook = ttk.Notebook(main_frame)
@@ -227,3 +231,40 @@ class AutomatonGUI:
             self.axes[2].set_title("AFD minimizado")
         self.fig.tight_layout()
         self.canvas.draw()
+
+    def on_validate_string(self):
+        input_string = self.string_var.get().strip()
+        if not input_string:
+            messagebox.showwarning("Advertencia", "Por favor, ingresa una cadena para validar.")
+            return
+
+        # Usar el autómata más avanzado disponible
+        automaton_to_use = self.minimized_dfa or self.dfa or self.nfa
+        if not automaton_to_use:
+            messagebox.showwarning("Advertencia", "No hay un autómata cargado para validar la cadena.")
+            return
+
+        try:
+            result = self.validate_string(automaton_to_use, input_string)
+            if result:
+                messagebox.showinfo("Resultado", f"La cadena '{input_string}' ES ACEPTADA por el autómata.")
+            else:
+                messagebox.showinfo("Resultado", f"La cadena '{input_string}' NO es aceptada por el autómata.")
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+    def validate_string(self, automaton: Automaton, input_string: str) -> bool:
+        current_state = automaton.start_state
+        for symbol in input_string:
+            if symbol not in automaton.alphabet:
+                raise ValueError(f"Símbolo '{symbol}' no está en el alfabeto del autómata.")
+            if current_state in automaton.transitions and symbol in automaton.transitions[current_state]:
+                current_state = next(iter(automaton.transitions[current_state][symbol]))
+            else:
+                return False  # No hay transición válida
+        return current_state in automaton.accept_states
+
+
+
+
+   
