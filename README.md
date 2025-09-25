@@ -1,67 +1,75 @@
 # Automata-FTI
 
-https://github.com/IgnacioGrilli/Automata-FTI.git
+Conversor y minimizador de autómatas finitos (NFA → DFA → DFA mínimo) con interfaz gráfica y línea de comandos.
 
+## Estructura del proyecto
 
-Lee un AFN (con o sin ε‑transiciones) en JSON o XML.
+- `automaton.py`: Clase principal `Automaton` y constantes.
+- `parsing.py`: Funciones para leer y escribir autómatas en JSON/XML.
+- `conversion.py`: Algoritmos de conversión NFA→DFA y minimización.
+- `visualization.py`: Visualización de autómatas con `matplotlib` y `networkx`.
+- `gui.py`: Interfaz gráfica (Tkinter).
+- `main.py`: Punto de entrada CLI y GUI.
+- `samples/`: Ejemplos de autómatas en JSON/XML.
 
-Lo convierte a AFD (construcción por subconjuntos + clausura‑ε).
+## Instalación de dependencias
 
-Opcionalmente minimiza el AFD con Hopcroft.
+Requiere Python 3.8+
 
-Escribe el resultado en JSON o XML (mismo formato que entrada por defecto).
+Instala las dependencias:
 
+```sh
+pip install -r requirements.txt
+```
 
-==============================================
-nfa_dfa.py — NFA a DFA + minimización (Python)
-==============================================
+## Uso por línea de comandos
 
-Uso básico (desde terminal):
+```sh
+python src/main.py <archivo_entrada> [opciones]
+```
 
-  python nfa_dfa.py samples/sample_nfa.json
-  # Genera: samples/sample_nfa_dfa_min.json
+Opciones principales:
+- `-o`, `--output`: Archivo de salida (JSON/XML)
+- `--in-format`: Forzar formato de entrada (`json`/`xml`)
+- `--out-format`: Forzar formato de salida (`json`/`xml`)
+- `--no-minimize`: Solo convierte a DFA, no minimiza
+- `--name`: Nombre del autómata de salida
+- `--gui`: Abre la interfaz gráfica
 
-Opciones útiles:
-  --no-minimize            # Sólo determiniza, sin minimizar
-  --in-format json|xml     # Forzar formato de entrada
-  --out-format json|xml    # Forzar formato de salida
-  -o salida.json           # Elegir archivo de salida
-  --name NOMBRE            # Renombrar el autómata de salida
+Ejemplo:
+```sh
+python src/main.py samples/sample_nfa.json --out-format xml
+```
 
-Formato JSON esperado:
-{
-  "name": "mi_nfa",
-  "states": ["q0","q1"],
-  "alphabet": ["a","b"],               # opcional: se infiere de transiciones
-  "start_state": "q0",
-  "accept_states": ["q1"],
-  "transitions": {
-    "q0": {"a": ["q0","q1"], "epsilon": ["q0"]},
-    "q1": {"b": ["q1"]}
-  }
+## Uso de la interfaz gráfica
+
+```sh
+python src/main.py
+```
+
+Permite cargar archivos JSON/XML, visualizar el NFA, convertir a DFA, minimizar y guardar el resultado.
+
+## Formatos soportados
+
+- **JSON**: Estructura con campos `states`, `alphabet`, `start_state`, `accept_states`, `transitions`.
+- **XML**: Estructura con nodos `<states>`, `<alphabet>`, `<start>`, `<accept>`, `<transitions>`.
+
+Ejemplo de transición en JSON:
+```json
+"transitions": {
+  "q0": {"a": "q1", "ε": ["q2", "q3"]},
+  "q1": {"b": "q2"}
 }
+```
 
-Notas sobre epsilon: se aceptan claves "", "ε", "eps", o "epsilon".
+## Ejemplos
 
-Formato XML esperado (flexible):
-<automaton name="mi_nfa">
-  <states><state>q0</state>...</states>
-  <alphabet><symbol>a</symbol>...</alphabet>  <!-- opcional -->
-  <start>q0</start>
-  <accept><state>q1</state></accept>
-  <transitions>
-    <t from="q0" symbol="a" to="q1"/>
-    <!-- o bien con subetiquetas <from>, <symbol>, <to> -->
-  </transitions>
-</automaton>
+Archivos de ejemplo en la carpeta `samples/`.
 
-Algoritmos:
-- Construcción por subconjuntos + clausura-ε para NFA→DFA.
-- Minimización de DFA con Hopcroft.
-- Se eliminan estados inalcanzables antes de minimizar.
+## Requisitos
+- Python 3.8+
+- Paquetes: `matplotlib`, `networkx`, `numpy`
 
-Salida:
-- Por defecto conserva el formato de entrada, pero se puede forzar con --out-format.
-- En JSON, las transiciones deterministas se serializan como string (un único destino),
-  y como lista cuando hay varias (no debería ocurrir en DFA, pero el parser soporta ambos).
+## Créditos
+Desarrollado por Ignacio Grilli y Matias Casteglione.
 
