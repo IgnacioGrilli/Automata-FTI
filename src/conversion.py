@@ -41,6 +41,20 @@ def nfa_to_dfa(nfa: Automaton, name_suffix="__DFA") -> Automaton:
         dfa.name = f"{dfa.name}{name_suffix}"
         return dfa
 
+    def is_sink_state(state: str) -> bool:
+        if state in nfa.accept_states:
+            return False
+        trans = nfa.transitions.get(state, {})
+        if not trans:
+            return True
+
+        all_self_loops = all(
+            all(dest == state for dest in dests) for dests in trans.values()
+        )
+        return all_self_loops
+
+    sink_states = {s for s in nfa.states if is_sink_state(s)}
+
     alphabet = set([sym for sym in nfa.alphabet if sym not in EPSILON_SYMBOLS])
     start_closure = frozenset(
         sorted(epsilon_closure({nfa.start_state}, nfa.transitions))
@@ -63,13 +77,14 @@ def nfa_to_dfa(nfa: Automaton, name_suffix="__DFA") -> Automaton:
         T_name = state_name[T]
 
         for a in alphabet:
-            U = set()
-            U |= move(set(T), a, nfa.transitions)
+            U = move(set(T), a, nfa.transitions)
             U = epsilon_closure(U, nfa.transitions)
+            U = U - sink_states
             U_f = frozenset(sorted(U))
 
             if not U_f:
                 continue
+
             if U_f not in state_name:
                 new_name = f"S{idx}"
                 state_name[U_f] = new_name
@@ -80,13 +95,7 @@ def nfa_to_dfa(nfa: Automaton, name_suffix="__DFA") -> Automaton:
                     dfa_accepts.add(new_name)
                 idx += 1
 
-            dfa_trans[T_name][a].add(state_name[U_f])
-
-    for s in dfa_trans:
-        for a in list(dfa_trans[s].keys()):
-            dests = dfa_trans[s][a]
-            if len(dests) > 1:
-                dfa_trans[s][a] = {sorted(dests)[0]}
+            dfa_trans[T_name][a] = {state_name[U_f]}
 
     dfa = Automaton(
         states=dfa_states,
