@@ -41,6 +41,20 @@ def nfa_to_dfa(nfa: Automaton, name_suffix="__DFA") -> Automaton:
         dfa.name = f"{dfa.name}{name_suffix}"
         return dfa
 
+    def is_sink_state(state: str) -> bool:
+        if state in nfa.accept_states:
+            return False
+        trans = nfa.transitions.get(state, {})
+        if not trans:
+            return True
+
+        all_self_loops = all(
+            all(dest == state for dest in dests) for dests in trans.values()
+        )
+        return all_self_loops
+
+    sink_states = {s for s in nfa.states if is_sink_state(s)}
+
     alphabet = set([sym for sym in nfa.alphabet if sym not in EPSILON_SYMBOLS])
     start_closure = frozenset(
         sorted(epsilon_closure({nfa.start_state}, nfa.transitions))
@@ -63,13 +77,14 @@ def nfa_to_dfa(nfa: Automaton, name_suffix="__DFA") -> Automaton:
         T_name = state_name[T]
 
         for a in alphabet:
-            U = set()
-            U |= move(set(T), a, nfa.transitions)
+            U = move(set(T), a, nfa.transitions)
             U = epsilon_closure(U, nfa.transitions)
+            U = U - sink_states
             U_f = frozenset(sorted(U))
 
             if not U_f:
                 continue
+
             if U_f not in state_name:
                 new_name = f"S{idx}"
                 state_name[U_f] = new_name
@@ -80,13 +95,7 @@ def nfa_to_dfa(nfa: Automaton, name_suffix="__DFA") -> Automaton:
                     dfa_accepts.add(new_name)
                 idx += 1
 
-            dfa_trans[T_name][a].add(state_name[U_f])
-
-    for s in dfa_trans:
-        for a in list(dfa_trans[s].keys()):
-            dests = dfa_trans[s][a]
-            if len(dests) > 1:
-                dfa_trans[s][a] = {sorted(dests)[0]}
+            dfa_trans[T_name][a] = {state_name[U_f]}
 
     dfa = Automaton(
         states=dfa_states,
@@ -135,23 +144,35 @@ def remove_unreachable_states(dfa: Automaton) -> Automaton:
 
     return dfa
 
-
 def hopcroft_minimize(dfa: Automaton, name_suffix="__MIN") -> Automaton:
     if not dfa.is_dfa:
         raise ValueError("hopcroft_minimize requiere un DFA")
 
     dfa = remove_unreachable_states(dfa)
-    P = [set(dfa.accept_states), set(dfa.states - dfa.accept_states)]
-    P = [p for p in P if p]
+
+    # --- A) Particionar aceptantes según comportamiento 
+    accept_blocks = []
+    for s in dfa.accept_states:
+        # firma de comportamiento: para cada símbolo, destino
+        signature = tuple(
+            sorted((a, next(iter(dfa.transitions.get(s, {}).get(a, set())), None)) for a in dfa.alphabet)
+        )
+        found = False
+        for block in accept_blocks:
+            if block["sig"] == signature:
+                block["set"].add(s)
+                found = True
+                break
+        if not found:
+            accept_blocks.append({"sig": signature, "set": {s}})
+
+    P = [block["set"] for block in accept_blocks]
+    non_accepts = set(dfa.states - dfa.accept_states)
+    if non_accepts:
+        P.append(non_accepts)
 
     from collections import deque as _deque
-
-    W = _deque()
-    if P:
-        if len(P) == 2 and len(P[0]) > len(P[1]):
-            W.append(P[1])
-        else:
-            W.append(P[0])
+    W = _deque(P)  # conjunto de bloques a procesar
 
     def get_transition(state: str, symbol: str) -> str:
         dests = dfa.transitions.get(state, {}).get(symbol, set())
@@ -159,13 +180,12 @@ def hopcroft_minimize(dfa: Automaton, name_suffix="__MIN") -> Automaton:
 
     while W:
         A = W.popleft()
-
         for c in dfa.alphabet:
+            # X = estados que con 'c' llegan a algún estado en A
             X = set(s for s in dfa.states if get_transition(s, c) in A)
             new_P = []
             for Y in P:
-                inter = Y & X
-                diff = Y - X
+                inter, diff = Y & X, Y - X
                 if inter and diff:
                     new_P.extend([inter, diff])
                     if Y in W:
@@ -181,21 +201,16 @@ def hopcroft_minimize(dfa: Automaton, name_suffix="__MIN") -> Automaton:
                     new_P.append(Y)
             P = new_P
 
+    # --- B) Construcción del DFA minimizado
     block_names = {}
     block_composition = {}
-
     for i, block in enumerate(P):
         name = f"M{i}"
-        combined_composition = set()
-
+        combined = set()
         for s in block:
             block_names[s] = name
-            if s in dfa.state_composition:
-                combined_composition.update(dfa.state_composition[s])
-            else:
-                combined_composition.add(s)
-
-        block_composition[name] = combined_composition
+            combined |= dfa.state_composition.get(s, {s})
+        block_composition[name] = combined
 
     new_states = set(block_names.values())
     new_start = block_names[dfa.start_state]
@@ -205,9 +220,12 @@ def hopcroft_minimize(dfa: Automaton, name_suffix="__MIN") -> Automaton:
     for s in dfa.states:
         s2 = block_names[s]
         for a in dfa.alphabet:
-            d = next(iter(dfa.transitions.get(s, {}).get(a, set())), None)
-            if d is not None:
-                new_trans[s2][a].add(block_names[d])
+            dests = dfa.transitions.get(s, {}).get(a, set())
+            if not dests:
+                continue
+            # cada transición de DFA tiene un solo destino
+            d = next(iter(dests))
+            new_trans[s2][a].add(block_names[d])
 
     minimized = Automaton(
         states=new_states,
@@ -219,5 +237,5 @@ def hopcroft_minimize(dfa: Automaton, name_suffix="__MIN") -> Automaton:
         name=f"{dfa.name}{name_suffix}",
         state_composition=block_composition,
     )
-
     return minimized
+
